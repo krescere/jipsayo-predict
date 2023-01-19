@@ -4,7 +4,6 @@ from apscheduler.schedulers.background import BackgroundScheduler
 import pickle
 import config
 import json
-import pandas as pd
 
 # init app
 app=Flask(__name__)
@@ -59,13 +58,13 @@ def house_reload():
         House.id,
         House.latitude,
         House.longitude
-        ).limit(10))
+        ))
 
     # initialize
     houses.clear()
     for row in resultproxy:
         row_as_dict=row._asdict()
-        print(row_as_dict)
+        #print(row_as_dict)
         houses.append(row_as_dict)
     return "houses reloaded : "+str(len(houses))+" houses"
 
@@ -77,9 +76,6 @@ def make_predict_input(start):
         input.append([start['longitude'],start['latitude'], house['longitude'],house['latitude']])
     return input
 
-def predict(input):
-    results=model.predict(input)
-    return results
 
 ################################################################### DTO
 class HouseResponse(object):
