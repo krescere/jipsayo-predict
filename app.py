@@ -1,9 +1,10 @@
 from flask import Flask, request
 from flask_sqlalchemy import SQLAlchemy
+from apscheduler.schedulers.background import BackgroundScheduler
 import pickle
 import config
 import json
-from apscheduler.schedulers.background import BackgroundScheduler
+import pandas as pd
 
 # init app
 app=Flask(__name__)
@@ -59,7 +60,7 @@ def house_reload():
         House.latitude,
         House.longitude
         ).limit(10))
-    
+
     # initialize
     houses.clear()
     for row in resultproxy:
