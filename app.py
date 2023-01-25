@@ -38,7 +38,6 @@ def house_filter():
     # predict
     input["time"]=model.predict(input[["start_경도","start_위도","경도","위도"]])
     input["time"]=input["time"].astype(int)
-    print(input.head(5))
     # filter
     response=input[input["time"]<=time][["id","time"]]
     
