@@ -1,6 +1,6 @@
 from flask import Flask, request
 from flask_sqlalchemy import SQLAlchemy
-from apscheduler.schedulers.background import BackgroundScheduler
+import pandas as pd
 import pickle
 import config
 import json
@@ -12,14 +12,11 @@ app.config['SQLALCHEMY_DATABASE_URI']=config.SQLALCHEMY_DATABASE_URI
 db=SQLAlchemy()
 db.init_app(app)
 
-# all houses
-houses=[]
-
-# scheduler
-sched = BackgroundScheduler(daemon=True)
+# all houses (dataframe)
+houses=pd.DataFrame(columns=['id','latitude','longitude'])
 
 # open pre-trained model
-with open("./model_20230111.pickle","rb") as file:
+with open("./model_total_bus_1.pickle","rb") as file:
         model=pickle.load(file)
 
 ################################################################## Controller
@@ -39,16 +36,14 @@ def house_filter():
     # predict input
     input=make_predict_input(start)
     # predict
-    response=[]
-    predict_times=model.predict(input) # 의심가는 병목 부분 1순위
-    for i in range(0,len(predict_times)):
-        predict_time=int(predict_times[i])
-        if predict_time<=time:
-            house=houses[i]
-            response.append(HouseResponse(house['id'],predict_time).__dict__)
+    input["time"]=model.predict(input[["start_경도","start_위도","경도","위도"]])
+    input["time"]=input["time"].astype(int)
+    print(input.head(5))
+    # filter
+    response=input[input["time"]<=time][["id","time"]]
     
     # return as JSON
-    return json.dumps(response)
+    return response.to_json(orient="records")
 
 # 부동산 갱신
 @app.route('/api/v1/houses/reload')
@@ -61,19 +56,18 @@ def house_reload():
         ))
 
     # initialize
-    houses.clear()
-    for row in resultproxy:
-        row_as_dict=row._asdict()
-        #print(row_as_dict)
-        houses.append(row_as_dict)
+    global houses
+    houses.drop(houses.index,inplace=True)
+    houses=pd.DataFrame(resultproxy.fetchall(),columns=resultproxy.keys())
     return "houses reloaded : "+str(len(houses))+" houses"
 
 ################################################################### Service
 def make_predict_input(start):
-    input=[]
-    # 4*10^4 pandas가 더 빠르다.
-    for house in houses :
-        input.append([start['longitude'],start['latitude'], house['longitude'],house['latitude']])
+    input=pd.DataFrame.copy(houses)
+    input['start_경도']=start['longitude']
+    input['start_위도']=start['latitude']
+    # rename
+    input.rename(columns={'latitude':'위도','longitude':'경도'},inplace=True)
     return input
 
 
@@ -90,12 +84,6 @@ class House(db.Model):
     id=db.Column(db.Integer, primary_key=True)
     latitude=db.Column(db.Float)
     longitude=db.Column(db.Float)
-
-''' with app.app_context():
-    # scheduler
-    sched.add_job(house_reload,'interval',seconds=10)
-    sched.start()
-    print("sheduler started") '''
 
 ################################################################### main
 if __name__ == '__main__':
