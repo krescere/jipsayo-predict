@@ -1,5 +1,6 @@
 from flask import Flask, request
 from flask_sqlalchemy import SQLAlchemy
+from numpy import sin, cos, arccos, pi
 import pandas as pd
 import pickle
 import config
@@ -16,7 +17,7 @@ db.init_app(app)
 houses=pd.DataFrame(columns=['id','latitude','longitude'])
 
 # open pre-trained model
-with open("./model_total_bus_1.pickle","rb") as file:
+with open("./model_total_bus_3.pickle","rb") as file:
         model=pickle.load(file)
 
 ################################################################## Controller
@@ -36,7 +37,7 @@ def house_filter():
     # predict input
     input=make_predict_input(start)
     # predict
-    input["time"]=model.predict(input[["start_경도","start_위도","경도","위도"]])
+    input["time"]=model.predict(input[["start_경도","start_위도","경도","위도","거리"]])
     input["time"]=input["time"].astype(int)
     # filter
     response=input[input["time"]<=time][["id","time"]]
@@ -63,12 +64,37 @@ def house_reload():
 ################################################################### Service
 def make_predict_input(start):
     input=pd.DataFrame.copy(houses)
-    input['start_경도']=start['longitude']
-    input['start_위도']=start['latitude']
+    input['start_경도']=float(start['longitude'])
+    input['start_위도']=float(start['latitude'])
     # rename
     input.rename(columns={'latitude':'위도','longitude':'경도'},inplace=True)
+    # add distance
+    add_distance(input)
     return input
 
+# 곡률 계산
+def rad2deg(radians):
+    degrees = radians * 180 / pi
+    return degrees
+
+def deg2rad(degrees):
+    radians = degrees * pi / 180
+    return radians
+
+def deg2rad_sin(degrees):
+    radians = degrees * pi / 180
+    return sin(radians)
+
+def deg2rad_cos(degrees):
+    radians = degrees * pi / 180
+    return cos(radians)
+
+def add_distance(input):
+    theta = input.start_경도 - input.경도
+    dist = (input.start_위도.apply(deg2rad_sin) * input.위도.apply(deg2rad_sin)) +\
+    (input.start_위도.apply(deg2rad_cos) * input.위도.apply(deg2rad_cos) * theta.apply(deg2rad_cos))
+    dist = dist.apply(arccos).apply(rad2deg) * 60 * 1.1515 * 1.609344
+    input["거리"] = dist
 
 ################################################################### DTO
 class HouseResponse(object):
