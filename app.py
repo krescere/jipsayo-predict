@@ -17,7 +17,7 @@ db.init_app(app)
 houses=pd.DataFrame(columns=['id','latitude','longitude'])
 
 # open pre-trained model
-with open("./model_total_bus_3.pickle","rb") as file:
+with open("./model_total_bus_4.pickle","rb") as file:
         model=pickle.load(file)
 
 ################################################################## Controller
