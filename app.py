@@ -16,9 +16,11 @@ db.init_app(app)
 # all houses (dataframe)
 houses=pd.DataFrame(columns=['id','latitude','longitude'])
 
-# open pre-trained model
+# open pre-trained models
 with open("./model_total_bus_4.pickle","rb") as file:
-        model=pickle.load(file)
+        public_transport_model=pickle.load(file)
+with open("./model_total_walk_2.pickle","rb") as file:
+        walk_model=pickle.load(file)
 
 ################################################################## Controller
 # 필터링 기능
@@ -36,12 +38,12 @@ def house_filter():
     
     # predict input
     input=make_predict_input(start)
-    # predict
-    input["time"]=model.predict(input[["start_경도","start_위도","경도","위도","거리"]])
-    input["time"]=input["time"].astype(int)
+    # public transport predict
+    public_transport_predict(input)
+    # walk predict
+    walk_predict(input)
     # filter
     response=input[input["time"]<=time][["id","time"]]
-    
     # return as JSON
     return response.to_json(orient="records")
 
@@ -71,6 +73,18 @@ def make_predict_input(start):
     # add distance
     add_distance(input)
     return input
+
+def public_transport_predict(input):
+    input["time"]=public_transport_model.predict(input[["start_경도","start_위도","경도","위도","거리"]])
+    input["time"]=input["time"].astype(int)
+    
+def walk_predict(input):
+    apt_under_one=input[input.거리<1]
+    input["walk"]=9999
+    input["walk"].iloc[apt_under_one.index]=walk_model.predict(apt_under_one[["start_경도","start_위도","경도","위도","거리"]])
+    input["walk"]=input["walk"].round()
+    input["walk"]=input["walk"].astype(int)
+    input["time"]=input[["time","walk"]].min(axis=1)
 
 # 곡률 계산
 def rad2deg(radians):
