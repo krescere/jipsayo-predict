@@ -1,6 +1,6 @@
 aws_db = {
     "user": "jipsayo",
-    "password": "12345678",
+    "password": "overcook",
     "host": "jipsayo-database.cz5bmx4ermfu.ap-northeast-2.rds.amazonaws.com",
     "port": "3306", # Maria DB의 포트
     "database": "jipsayo",
